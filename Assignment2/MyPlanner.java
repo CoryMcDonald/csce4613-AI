@@ -34,7 +34,6 @@ public class MyPlanner {
             MyState oldchild = null;
          	double acost = action_cost(s, a); // compute the cost of the action
             if(beenthere.contains(child)) {
-//            	oldchild = beenthere.find(child);
             	Iterator<MyState> iter = beenthere.iterator();
             	while(iter.hasNext()){
             		if(iter.next().isEqual(child)){
@@ -68,19 +67,23 @@ public class MyPlanner {
 
 	private static double action_cost(MyState s, MyState a) {
 		// TODO Auto-generated method stub
-		return 0;
+		Color c = new Color(image.getRGB(a.x, a.y));
+		double green = c.getGreen();
+		return green;
 	}
 	
+	static BufferedImage image = null;
 	public static void main(String[] args){
 		// Load a image from a file
-		BufferedImage image = ImageIO.read(new File(inputFilePath));
-
-		// Make a new image
-		BufferedImage newimage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-
+		String inputFilePath = "terrain.png";
+		image = ImageIO.read(new File(inputFilePath));
+		
+		int x = 0, y = 0;
+		
 		// Read a pixel
 		Color c = new Color(image.getRGB(x, y));
 		int greenChannel = c.getGreen();
+		System.out.println(greenChannel);
 
 		// Set a pixel (0xAARRGGBB)
 		image.setRGB(x, y, 0xff00ff00);
