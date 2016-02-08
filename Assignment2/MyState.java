@@ -1,5 +1,5 @@
 
-public class MyState {
+public class MyState implements Comparable<MyState>{
 	public double cost;
 	MyState parent;
 	public int x;
@@ -14,10 +14,17 @@ public class MyState {
 
 	public boolean isEqual(MyState state) {
 		// TODO Auto-generated method stub
-		if(this.x == state.x)
-			if(this.y == state.y)
+		if(this.x == state.x&& this.y == state.y)
 				return true;
 		return false;
+	}
+	
+	public int compareTo(MyState state) {
+		if(this.cost < state.cost)
+			return -1;
+		if(this.cost > state.cost)
+			return 1;
+		return 0;
 	}
 	
 }
