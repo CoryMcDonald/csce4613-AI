@@ -1,23 +1,28 @@
 import java.awt.Color;
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.PriorityQueue;
-import java.util.TreeSet;
 
 import javax.imageio.ImageIO;
 
-public class MyPlanner {
-	public static MyState uniform_cost_search(MyState startState, MyState goalState){
-      PriorityQueue<MyState> frontier = new PriorityQueue<MyState>(); // lowest cost comes out first
-      TreeSet<MyState> beenthere = new TreeSet<MyState>();
+public class MyPlanner {	
+	
+	public static MyState uniform_cost_search(MyState startState, MyState goalState) throws Exception{
+      PriorityQueue<MyState> frontier = new PriorityQueue<MyState>();
+      HashMap<Point, MyState> beenthere = new HashMap<Point, MyState>();
       startState.cost = 0.0;
       startState.parent = null;
-      beenthere.add(startState);
+      beenthere.put(new Point(startState.x, startState.y), startState);
       frontier.add(startState);
+      int iter = 0;
       while(frontier.size() > 0) {
+      	iter++;
+      	if(iter % 5000 < 1000)
+      		image.setRGB(startState.x, startState.y, 0xff00ff00);
          MyState s = frontier.poll();
          if(s.isEqual(goalState))
             return s;
@@ -28,67 +33,54 @@ public class MyPlanner {
          MyState west = new MyState(0.0, s, s.x-1, s.y);
 
          List<MyState> actions = new ArrayList<MyState>();
+         actions.add(north);
+         actions.add(south);
+         actions.add(east);
+         actions.add(west);
          
+         MyState oldchild = null;
          for(MyState a : actions){
-         	MyState child = transition(s, a); // compute the next state
-            MyState oldchild = null;
-         	double acost = action_cost(s, a); // compute the cost of the action
-            if(beenthere.contains(child)) {
-            	Iterator<MyState> iter = beenthere.iterator();
-            	while(iter.hasNext()){
-            		if(iter.next().isEqual(child)){
-            			oldchild.cost = iter.next().cost;
-            			oldchild.parent.equals(iter.next().parent);
-            			oldchild.x = iter.next().x;
-            			oldchild.y = iter.next().y;
-            			break;
-            		}
-            	}
-               if(s.cost + acost < oldchild.cost) {
-                  oldchild.cost = s.cost + acost;
-                  oldchild.parent = s;
-               }
-            }
-            else {
-               child.cost = s.cost + acost;
-               child.parent = s;
-               frontier.add(child);
-               beenthere.add(child);
-            }
+         	if((a.x >= 0 && a.x < 500) && (a.y >= 0 && a.y < 500)){
+	         	double acost = action_cost(a); 
+	         	Point childPoint = new Point(a.x, a.y);
+	            if(beenthere.containsKey(childPoint)) {
+	            	oldchild = beenthere.get(childPoint);
+	               if(s.cost + acost < oldchild.cost) {
+	                  oldchild.cost = s.cost + acost;
+	                  oldchild.parent = s;
+	               }
+	            }
+	            else {
+	               a.cost = s.cost + acost;
+	               a.parent = s;
+	               frontier.add(a);
+	               Point childPt = new Point(a.x, a.y);
+	               beenthere.put(childPt, a);
+	            }
+	         }
          }
       }
       throw new Exception("There is no path to the goal");
    }
 
-	private static MyState transition(MyState s, MyState a) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	private static double action_cost(MyState s, MyState a) {
-		// TODO Auto-generated method stub
+	private static double action_cost(MyState a) {
 		Color c = new Color(image.getRGB(a.x, a.y));
 		double green = c.getGreen();
 		return green;
 	}
 	
 	static BufferedImage image = null;
-	public static void main(String[] args){
-		// Load a image from a file
-		String inputFilePath = "terrain.png";
-		image = ImageIO.read(new File(inputFilePath));
+	public static final String INPUT_FILE_PATH = "terrain.png";
+	public static final String OUTPUT_FILE_PATH = "path.png";
+	
+	public static void main(String[] args) throws Exception{
+		image = ImageIO.read(new File(INPUT_FILE_PATH));
 		
-		int x = 0, y = 0;
-		
-		// Read a pixel
-		Color c = new Color(image.getRGB(x, y));
-		int greenChannel = c.getGreen();
-		System.out.println(greenChannel);
+		MyState start = new MyState(0.0, null, 100,100);
+		MyState goal = new MyState(0.0, null, 400, 400);
+		double cost = uniform_cost_search(start, goal).cost;
+		System.out.println(cost);
 
-		// Set a pixel (0xAARRGGBB)
-		image.setRGB(x, y, 0xff00ff00);
-
-		// Write the image to a PNG file
-		ImageIO.write(image, "png", new File(outputFilePath));
+		ImageIO.write(image, "png", new File(OUTPUT_FILE_PATH));
 	}
 }
