@@ -13,31 +13,29 @@ public class MyPlanner {
       HashMap<String, MyState> beenthere = new HashMap<String, MyState>();
       startState.cost = 0.0;
       startState.parent = null;
-      frontier.add(startState);
       
+      frontier.add(startState);
       while(frontier.size() > 0) {
-      	MyState s = frontier.poll();
+         MyState s = frontier.poll();
          if(s.offset[0].equals(goal))
-            return s;
-
+         	return s;
+         
          List<Point[]> validMoves = new ArrayList<Point[]>();
          
          for(int i = 0; i < s.offset.length; i++){
-         	for(int x = -1; x <= 1; x++){
-         		for(int y = -1; y <= 1; y++){
+         	for(int x = -1; x <=1; x++){
+         		for(int y = -1; y<=1; y++){
          			if(Math.abs(x) != Math.abs(y)){
          				Point[] copy = new Point[s.offset.length];
          				System.arraycopy(s.offset, 0, copy, 0, copy.length);
          				copy[i] = new Point(copy[i].x+x, copy[i].y+y);
-         				
-         				if(isValid(copy)){
+         				if(isValid(copy))
          					validMoves.add(copy);
-         				}
          			}
          		}
          	}
          }
-         
+        
          for(Point[] moves : validMoves){
          	String str = "";
          	for(Point m : moves)
@@ -46,24 +44,24 @@ public class MyPlanner {
          	double cost = s.cost + 1;
          	MyState oldchild = null;
          	if(beenthere.containsKey(str)){
-         		if(cost < (oldchild = beenthere.get(str)).cost){
+         		if(cost < (oldchild=beenthere.get(str)).cost){
          			oldchild.cost = cost;
-         			oldchild.parent = s;
+         			//oldchild.parent = s;
          			frontier.add(oldchild);
          			beenthere.put(str, oldchild);
          		}
          	}
          	else{
          		oldchild = new MyState(s.cost + 1, s, moves);
+         		oldchild.parent = s;
          		frontier.add(oldchild);
          		beenthere.put(str, oldchild);
-         		
          	}
          }
       }
-      return new MyState(-1, null, new Point[]{new Point(0,0)} );
+      return new MyState(-1, null, new Point[]{new Point(0,0)});
    }
-   
+
    public static boolean isValid(Point[] questionedPiece){
    	boolean used[][] = new boolean[10][10];
    	for(Point p : black){
@@ -108,32 +106,28 @@ public class MyPlanner {
    	pieces[8] = new Point[]{new Point(7,6), new Point(8,5), new Point(8,6)};
    	pieces[9] = new Point[]{new Point(5,3), new Point(6,3), new Point(6,2)};
    	pieces[10] = new Point[]{new Point(5,1), new Point(5,2), new Point(6,1)};
-      
-      Point[] offset = new Point[]{
-      		new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0),
-      		new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0),
-      		new Point(0,0)
-      };
-      
+   	
+   	Point[] offset = new Point[]{
+   			new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0),
+   			new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0)};
+   	
+   	Point goal = new Point(4,-2);
+          
       MyState start = new MyState(0.0, null, offset);
-      Point goal = new Point(4,-2);
-      MyState answer = uniform_cost_search(start, goal);
-      
-      int[][] print = new int[answer.offset.length][2];
+      MyState answer;
+      answer = uniform_cost_search(start, goal);
       
       while(answer.parent != null){
-      	for(int i = 0; i < answer.offset.length; i++){
-      		print[i][0] = answer.offset[i].x;
-      		print[i][1] = answer.offset[i].y;
-//      		System.out.print("(" + 	answer.offset[i].x + ", " + answer.offset[i].y + ")");
-      	}
-//      	System.out.println();
-         answer = answer.parent;
+			for(int i = 0; i < pieces.length; i++){
+	      	int x = pieces[i][0].x + answer.offset[i].x;
+				int y = pieces[i][0].y + answer.offset[i].y;
+				System.out.print("(" + x + "," + y + ") ");  
+			}
+			System.out.println();
+			answer = answer.parent;
+
       }
       
-      for(int i = 0; i < answer.offset.length; i++){
-      	System.out.println("(" + print[i][0] + ", " + print[i][1] + ")");
-      }
       
    }
 }

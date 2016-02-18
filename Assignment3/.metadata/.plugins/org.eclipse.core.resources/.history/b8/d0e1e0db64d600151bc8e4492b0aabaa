@@ -119,20 +119,15 @@ public class MyPlanner {
       Point goal = new Point(4,-2);
       MyState answer = uniform_cost_search(start, goal);
       
-      int[][] print = new int[answer.offset.length][2];
-      
       while(answer.parent != null){
       	for(int i = 0; i < answer.offset.length; i++){
-      		print[i][0] = answer.offset[i].x;
-      		print[i][1] = answer.offset[i].y;
-//      		System.out.print("(" + 	answer.offset[i].x + ", " + answer.offset[i].y + ")");
+      		int x = answer.offset[i].x;
+      		int y = answer.offset[i].y;
+      		
+      		System.out.print("(" + 	x + ", " + y + ")");
       	}
-//      	System.out.println();
+      	System.out.println();
          answer = answer.parent;
-      }
-      
-      for(int i = 0; i < answer.offset.length; i++){
-      	System.out.println("(" + print[i][0] + ", " + print[i][1] + ")");
       }
       
    }
