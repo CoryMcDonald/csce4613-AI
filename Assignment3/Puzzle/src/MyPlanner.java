@@ -1,78 +1,67 @@
-import java.awt.Color;
 import java.awt.Point;
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import javax.imageio.ImageIO;
-
 public class MyPlanner {
 	public static Point[] black;
    public static Point[][] pieces;
    
-   public static MyState uniform_cost_search(MyState startState, MyState goalState) throws Exception{
+   public static MyState uniform_cost_search(MyState startState, Point goal) throws Exception{
       PriorityQueue<MyState> frontier = new PriorityQueue<MyState>(); // lowest cost comes out first
-      HashMap<Point, MyState> beenthere = new HashMap<Point, MyState>();
+      HashMap<String, MyState> beenthere = new HashMap<String, MyState>();
       startState.cost = 0.0;
       startState.parent = null;
-      beenthere.put(new Point (startState.x, startState.y), startState);
+      
       frontier.add(startState);
-      int iter = 0;
       while(frontier.size() > 0) {
-         iter++;
          MyState s = frontier.poll();
-         if(iter % 5000 < 1000)
-            image.setRGB(s.x, s.y, 0xff00ff00);
-         if(s.isEqual(goalState))
-            return s;
-
-         MyState north = new MyState(0.0, s, s.x, s.y+1);
-         MyState south = new MyState(0.0, s, s.x, s.y-1);
-         MyState east = new MyState(0.0, s, s.x+1, s.y);
-         MyState west = new MyState(0.0, s, s.x-1, s.y);
-
-         List<MyState> actions = new ArrayList<MyState>();
+         if(s.offset[0].equals(goal))
+         	return s;
          
-         actions.add(north);
-         actions.add(south);
-         actions.add(east);
-         actions.add(west);
+         List<Point[]> validMoves = new ArrayList<Point[]>();
          
-         MyState oldchild = null;
-         for(MyState a : actions){
-            if((a.x >= 0 && a.x < 500) && (a.y >= 0 && a.y < 500)){
-               double acost = action_cost(a);
-               Point childPoint = new Point(a.x, a.y);
-               if(beenthere.containsKey(childPoint)){
-                  oldchild = beenthere.get(childPoint);
-                  if(s.cost + acost < oldchild.cost){
-                     oldchild.cost = s.cost + acost;
-                     oldchild.parent = s;
-                  }
-               }
-               else {
-                  a.cost = s.cost + acost;
-                  a.parent = s;
-                  frontier.add(a);
-                  Point childPt = new Point(a.x, a.y);
-                  beenthere.put(childPt, a);
-               }
-            }
+         for(int i = 0; i < s.offset.length; i++){
+         	for(int x = -1; x <=1; x++){
+         		for(int y = -1; y<=1; y++){
+         			if(Math.abs(x) != Math.abs(y)){
+         				Point[] copy = new Point[s.offset.length];
+         				System.arraycopy(s.offset, 0, copy, 0, copy.length);
+         				copy[i] = new Point(copy[i].x+x, copy[i].y+y);
+         				if(isValid(copy))
+         					validMoves.add(copy);
+         			}
+         		}
+         	}
+         }
+        
+         for(Point[] moves : validMoves){
+         	String str = "";
+         	for(Point m : moves)
+         		str += m.x + " " + m.y + " ";
+         	
+         	double cost = s.cost + 1;
+         	MyState oldchild = null;
+         	if(beenthere.containsKey(str)){
+         		if(cost < (oldchild=beenthere.get(str)).cost){
+         			oldchild.cost = cost;
+         			//oldchild.parent = s;
+         			frontier.add(oldchild);
+         			beenthere.put(str, oldchild);
+         		}
+         	}
+         	else{
+         		oldchild = new MyState(s.cost + 1, s, moves);
+         		oldchild.parent = s;
+         		frontier.add(oldchild);
+         		beenthere.put(str, oldchild);
+         	}
          }
       }
-      throw new Exception("There is no path to the goal");
+      return new MyState(-1, null, new Point[]{new Point(0,0)});
    }
 
-   private static double action_cost(MyState a) {
-      // TODO Auto-generated method stub
-      Color c = new Color(image.getRGB(a.x, a.y));
-      double green = c.getGreen();
-      return green;
-   }
-   
    public static boolean isValid(Point[] questionedPiece){
    	boolean used[][] = new boolean[10][10];
    	for(Point p : black){
@@ -91,9 +80,6 @@ public class MyPlanner {
    	return true;
    }
    
-   static BufferedImage image = null;
-   public static final String INPUT_FILE_PATH = "terrain.png";
-   public static final String OUTPUT_FILE_PATH = "path.png";
    public static void main(String[] args) throws Exception{
    	black = new Point[]{ new Point(0,0), new Point(1,0), new Point(2,0), new Point(3,0), new Point(4,0),
    								new Point(5,0), new Point(6,0), new Point(7,0), new Point(8,0), new Point(9,0),
@@ -120,19 +106,28 @@ public class MyPlanner {
    	pieces[8] = new Point[]{new Point(7,6), new Point(8,5), new Point(8,6)};
    	pieces[9] = new Point[]{new Point(5,3), new Point(6,3), new Point(6,2)};
    	pieces[10] = new Point[]{new Point(5,1), new Point(5,2), new Point(6,1)};
-      
-      image = ImageIO.read(new File(INPUT_FILE_PATH));
-      
-      MyState start = new MyState(0.0, null, 100, 100);
-      MyState goal = new MyState(0.0, null, 400, 400);
-      MyState answer = uniform_cost_search(start, goal);
-      System.out.print(answer.cost);
+   	
+   	Point[] offset = new Point[]{
+   			new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0),
+   			new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0), new Point(0,0)};
+   	
+   	Point goal = new Point(4,-2);
+          
+      MyState start = new MyState(0.0, null, offset);
+      MyState answer;
+      answer = uniform_cost_search(start, goal);
       
       while(answer.parent != null){
-         image.setRGB(answer.x, answer.y, 0xffff0000);
-         answer = answer.parent;
+			for(int i = 0; i < pieces.length; i++){
+	      	int x = pieces[i][0].x + answer.offset[i].x;
+				int y = pieces[i][0].y + answer.offset[i].y;
+				System.out.print("(" + x + "," + y + ") ");  
+			}
+			System.out.println();
+			answer = answer.parent;
+
       }
       
-      ImageIO.write(image, "png", new File(OUTPUT_FILE_PATH));
+      
    }
 }
