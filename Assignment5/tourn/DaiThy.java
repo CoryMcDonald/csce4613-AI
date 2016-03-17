@@ -149,8 +149,10 @@ class DaiThy implements IAgent
 			}
 		}
 		else {
+
 			// Head for the opponent's flag
-			uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
+			if(m.getSpriteCountOpponent() < 1)
+				uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
 			// m.setDestination(i, Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT);
 
 			// Shoot at the flag if I can hit it
@@ -165,9 +167,9 @@ class DaiThy implements IAgent
 
 	public void update(Model m) {
 		for(int i = 0; i < m.getSpriteCountSelf(); i++) {
+			uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
 
 			// Head for the opponent's flag
-			uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
 			// m.setDestination(i, Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT);
 
 			// Shoot at any opponents within range
@@ -200,12 +202,14 @@ class DaiThy implements IAgent
 		int heuristicAndCost;
 
 		public Point(float x, float y){
+			parent = null;
 			this.x = x;
 			this.y = y;
 			this.cost = (float)0;
 		}
 
 		public Point(float x, float y, float cost){
+			parent = null;
 			this.x = x;
 			this.y = y;
 			this.cost = cost;
@@ -218,12 +222,14 @@ class DaiThy implements IAgent
 			Point that = (Point) o;
 			return ((int)x == (int)that.x && (int)y == (int)that.y);
 		}
+
 		@Override
 		public int hashCode() {
 			int result = (int)x;
 			result = 31 * result + (int)y;
 			return result;
 		}
+
 		@Override
 		public int compareTo(Point state) {
 			if(heuristicAndCost > state.heuristicAndCost) {
@@ -235,10 +241,6 @@ class DaiThy implements IAgent
 			return -1;
 		}
 
-		@Override
-		public String toString() {
-			return "(" + this.x + "," + this.y + ")";
-		}
 	}
 
 	void uniformCostSearch(Model m, int i, Point goal) {
@@ -273,7 +275,7 @@ class DaiThy implements IAgent
 		}else{
 			PriorityQueue<Point> frontier = new PriorityQueue<Point>();
 			HashSet<Point> beenthere = new HashSet<Point>();
-			Point origin = new Point(myX, myY, 0);
+			Point origin = new Point(myX, myY);
 			Point s = null;
 			frontier.add(origin);
 
