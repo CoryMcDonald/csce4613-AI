@@ -6,12 +6,12 @@ import java.awt.Point;
 // The contents of this file are dedicated to the public domain.
 // (See http://creativecommons.org/publicdomain/zero/1.0/)
 
-class Human implements IAgent
+class DaiThy implements IAgent
 {
 	int iter;
 	int index; // a temporary value used to pass values around
 
-	Human() {
+	DaiThy() {
 		reset();
 	}
 
@@ -51,12 +51,124 @@ class Human implements IAgent
 		return dd;
 	}
 
+	void avoidBombs(Model m, int i) {
+		if(nearestBombTarget(m, m.getX(i), m.getY(i)) <= 2.0f * Model.BLAST_RADIUS * Model.BLAST_RADIUS) {
+			float dx = m.getX(i) - m.getBombTargetX(index);
+			float dy = m.getY(i) - m.getBombTargetY(index);
+			if(dx == 0 && dy == 0)
+				dx = 1.0f;
+			m.setDestination(i, m.getX(i) + dx * 10.0f, m.getY(i) + dy * 10.0f);
+		}
+	}
+
+	void beDefender(Model m, int i) {
+		// Find the opponent nearest to my flag
+		nearestOpponent(m, Model.XFLAG, Model.YFLAG);
+		if(index >= 0) {
+			float enemyX = m.getXOpponent(index);
+			float enemyY = m.getYOpponent(index);
+
+			// Stay between the enemy and my flag
+			m.setDestination(i, 0.5f * (Model.XFLAG + enemyX), 0.5f * (Model.YFLAG + enemyY));
+
+			// Throw boms if the enemy gets close enough
+			if(sq_dist(enemyX, enemyY, m.getX(i), m.getY(i)) <= Model.MAX_THROW_RADIUS * Model.MAX_THROW_RADIUS)
+				m.throwBomb(i, enemyX, enemyY);
+		}
+		else {
+			// Guard the flag
+			m.setDestination(i, Model.XFLAG + Model.MAX_THROW_RADIUS, Model.YFLAG);
+		}
+
+		// If I don't have enough energy to throw a bomb, rest
+		if(m.getEnergySelf(i) < Model.BOMB_COST)
+			m.setDestination(i, m.getX(i), m.getY(i));
+
+		// Try not to die
+		avoidBombs(m, i);
+	}
+
+	void beFlagAttacker(Model m, int i) {
+		// Head for the opponent's flag
+		uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
+		// m.setDestination(i, Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT);
+
+		// Avoid opponents
+		float myX = m.getX(i);
+		float myY = m.getY(i);
+		nearestOpponent(m, myX, myY);
+		if(index >= 0) {
+			float enemyX = m.getXOpponent(index);
+			float enemyY = m.getYOpponent(index);
+			if(sq_dist(enemyX, enemyY, myX, myY) <= (Model.MAX_THROW_RADIUS + Model.BLAST_RADIUS) * (Model.MAX_THROW_RADIUS + Model.BLAST_RADIUS))
+				m.setDestination(i, myX + 10.0f * (myX - enemyX), myY + 10.0f * (myY - enemyY));
+		}
+
+		// Shoot at the flag if I can hit it
+		if(sq_dist(m.getX(i), m.getY(i), Model.XFLAG_OPPONENT, Model.YFLAG_OPPONENT) <= Model.MAX_THROW_RADIUS * Model.MAX_THROW_RADIUS) {
+			m.throwBomb(i, Model.XFLAG_OPPONENT, Model.YFLAG_OPPONENT);
+		}
+
+		// Try not to die
+		avoidBombs(m, i);
+	}
+
+	void beAggressor(Model m, int i) {
+		float myX = m.getX(i);
+		float myY = m.getY(i);
+
+		// Find the opponent nearest to me
+		nearestOpponent(m, myX, myY);
+		if(index >= 0) {
+			float enemyX = m.getXOpponent(index);
+			float enemyY = m.getYOpponent(index);
+
+			if(m.getEnergySelf(i) >= m.getEnergyOpponent(index)) {
+
+				// Get close enough to throw a bomb at the enemy
+				float dx = myX - enemyX;
+				float dy = myY - enemyY;
+				float t = 1.0f / Math.max(Model.EPSILON, (float)Math.sqrt(dx * dx + dy * dy));
+				dx *= t;
+				dy *= t;
+				m.setDestination(i, enemyX + dx * (Model.MAX_THROW_RADIUS - Model.EPSILON), enemyY + dy * (Model.MAX_THROW_RADIUS - Model.EPSILON));
+
+				// Throw bombs
+				if(sq_dist(enemyX, enemyY, m.getX(i), m.getY(i)) <= Model.MAX_THROW_RADIUS * Model.MAX_THROW_RADIUS)
+					m.throwBomb(i, enemyX, enemyY);
+			}
+			else {
+
+				// If the opponent is close enough to shoot at me...
+				if(sq_dist(enemyX, enemyY, myX, myY) <= (Model.MAX_THROW_RADIUS + Model.BLAST_RADIUS) * (Model.MAX_THROW_RADIUS + Model.BLAST_RADIUS)) {
+					m.setDestination(i, myX + 10.0f * (myX - enemyX), myY + 10.0f * (myY - enemyY)); // Flee
+				}
+				else {
+					m.setDestination(i, myX, myY); // Rest
+				}
+			}
+		}
+		else {
+			// Head for the opponent's flag
+			uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
+			// m.setDestination(i, Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT);
+
+			// Shoot at the flag if I can hit it
+			if(sq_dist(m.getX(i), m.getY(i), Model.XFLAG_OPPONENT, Model.YFLAG_OPPONENT) <= Model.MAX_THROW_RADIUS * Model.MAX_THROW_RADIUS) {
+				m.throwBomb(i, Model.XFLAG_OPPONENT, Model.YFLAG_OPPONENT);
+			}
+		}
+
+		// Try not to die
+		avoidBombs(m, i);
+	}
+
 	public void update(Model m) {
 		for(int i = 0; i < m.getSpriteCountSelf(); i++) {
-			uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
 
 			// Head for the opponent's flag
-			m.setDestination(i, Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT);
+			uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
+			// m.setDestination(i, Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT);
 
 			// Shoot at any opponents within range
 			if(nearestOpponent(m, m.getX(i), m.getY(i)) <= Model.MAX_THROW_RADIUS * Model.MAX_THROW_RADIUS) {
@@ -77,7 +189,6 @@ class Human implements IAgent
 				m.setDestination(i, m.getX(i) + dx * 10.0f, m.getY(i) + dy * 10.0f);
 			}
 		}
-
 		iter++;
 	}
 
@@ -162,22 +273,17 @@ class Human implements IAgent
 		}else{
 			PriorityQueue<Point> frontier = new PriorityQueue<Point>();
 			HashSet<Point> beenthere = new HashSet<Point>();
-			boolean success = false;
 			Point origin = new Point(myX, myY, 0);
-			Point parent = null;
 			Point s = null;
-			int num = 0;
 			frontier.add(origin);
 
 			while(frontier.size() > 0) {
 				s = frontier.poll();
-				num++;
 				if((s.x > goal.x - goalThreshold && s.x < goal.x + goalThreshold) && (s.y > goal.y - goalThreshold && s.y < goal.y + goalThreshold) ){
 					Point childPoint = s;
 					while(childPoint.parent != null && childPoint.parent.parent != null)
 						childPoint = childPoint.parent;
 					m.setDestination(i, (float)childPoint.x, (float)childPoint.y);
-					success = true;
 					break;
 				}
 
@@ -185,33 +291,34 @@ class Human implements IAgent
 				Point right = new Point(s.x+distanceToMove, s.y, s.cost);
 				Point up = new Point(s.x, s.y-distanceToMove, s.cost);
 				Point down = new Point(s.x, s.y+distanceToMove, s.cost );
-				boolean added =false;
+
 				ArrayList<Point> actions = new ArrayList<Point>();
+
 				actions.add(left);
 				actions.add(right);
 				actions.add(up);
 				actions.add(down);
 
-				for(Point a : actions)
-				{
-					if(!beenthere.contains(a) && a.x > 0 && a.y >0 && a.x < Model.XMAX && a.y < Model.YMAX){
-						//Doing magic numbers trying to get it where the fasatest tiles are the ones getting used
-						float travelSpeed = (float)3.5-m.getTravelSpeed(a.x, a.y);
-						int distance = (int)Math.sqrt(sq_dist(a.x, a.y, goal.x, goal.y));
-						if ( travelSpeed < 0)
-							travelSpeed = 0;
-						a.cost += travelSpeed*200;
-						a.parent = s;
-						a.heuristicAndCost = (int)a.cost;
-						if(travelSpeed < 3){
-							frontier.add(a);
-							beenthere.add(a);
+				for(Point a : actions){
+					if(a.x > 0 && a.y >0 && a.x < Model.XMAX && a.y < Model.YMAX){
+
+						if(!beenthere.contains(a)){
+							float travelSpeed = (float)3.5-m.getTravelSpeed(a.x, a.y);
+							if ( travelSpeed < 0)
+								travelSpeed = 0;
+
+							a.cost += travelSpeed*200;
+							a.parent = s;
+							a.heuristicAndCost = (int)a.cost;
+
+							if(travelSpeed < 3){
+								frontier.add(a);
+								beenthere.add(a);
+							}
 						}
 					}
 				}
-
 			}
-
 		}
 	}
 }
