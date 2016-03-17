@@ -250,24 +250,24 @@ class DaiThy implements IAgent
 		int goalThreshold = 10;
 		int distanceToMove = 10;
 
-		if(goal.x < 0 && goal.x > Model.XMAX) {
-			goal.x = myX;
-		}
-		if(goal.y < 0 && goal.y > Model.YMAX){
-			goal.y = myY;
-		}
-		if(m.getTravelSpeed(goal.x, goal.y) <= .5){
-			for(int a = (int)goal.x-60; a< goal.x+60; a++)
-				if(a > 1 && goal.y > 1 && a < Model.XMAX  && goal.y < Model.YMAX )
-					if(m.getTravelSpeed(a, goal.y) > .5)
-						goal.x = a;
+		// if(goal.x < 0 && goal.x > Model.XMAX) {
+		// 	goal.x = myX;
+		// }
+		// if(goal.y < 0 && goal.y > Model.YMAX){
+		// 	goal.y = myY;
+		// }
+		// if(m.getTravelSpeed(goal.x, goal.y) <= .5){
+		// 	for(int a = (int)goal.x-60; a< goal.x+60; a++)
+		// 		if(a > 1 && goal.y > 1 && a < Model.XMAX  && goal.y < Model.YMAX )
+		// 			if(m.getTravelSpeed(a, goal.y) > .5)
+		// 				goal.x = a;
 					
 				
-			for(int b = (int)goal.y-60; b< goal.y+60; b++)
-				if(goal.x > 1 && b > 1 && goal.x < Model.XMAX  && b < Model.YMAX )
-					if(m.getTravelSpeed(goal.x, b) > .5)
-						goal.y = b;
-		}
+		// 	for(int b = (int)goal.y-60; b< goal.y+60; b++)
+		// 		if(goal.x > 1 && b > 1 && goal.x < Model.XMAX  && b < Model.YMAX )
+		// 			if(m.getTravelSpeed(goal.x, b) > .5)
+		// 				goal.y = b;
+		// }
 		
 		//Threshold for just going directly to that destination
 		if(sq_dist(myX, myY, goal.x, goal.y) <= 250){
@@ -289,20 +289,20 @@ class DaiThy implements IAgent
 					break;
 				}
 
-				Point left = new Point(s.x-distanceToMove, s.y, s.cost);
-				Point right = new Point(s.x+distanceToMove, s.y, s.cost);
-				Point up = new Point(s.x, s.y-distanceToMove, s.cost);
-				Point down = new Point(s.x, s.y+distanceToMove, s.cost );
+				Point north = new Point(s.x, s.y + distanceToMove, s.cost);
+				Point south = new Point(s.x, s.y - distanceToMove, s.cost);
+				Point east = new Point(s.x + distanceToMove, s.y, s.cost);
+				Point west = new Point(s.x - distanceToMove, s.y, s.cost);
 
 				ArrayList<Point> actions = new ArrayList<Point>();
 
-				actions.add(left);
-				actions.add(right);
-				actions.add(up);
-				actions.add(down);
+				actions.add(north);
+				actions.add(south);
+				actions.add(east);
+				actions.add(west);
 
 				for(Point a : actions){
-					if(a.x > 0 && a.y >0 && a.x < Model.XMAX && a.y < Model.YMAX){
+					if(a.x >= 0 && a.y >= 0 && a.x < Model.XMAX && a.y < Model.YMAX){
 
 						if(!beenthere.contains(a)){
 							float travelSpeed = (float)3.5-m.getTravelSpeed(a.x, a.y);
