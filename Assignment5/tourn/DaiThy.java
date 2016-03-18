@@ -2,6 +2,7 @@ import java.util.PriorityQueue;
 import java.util.HashSet;
 import java.util.ArrayList;
 import java.awt.Point;
+import java.util.Random;
 
 // The contents of this file are dedicated to the public domain.
 // (See http://creativecommons.org/publicdomain/zero/1.0/)
@@ -59,110 +60,6 @@ class DaiThy implements IAgent
 				dx = 1.0f;
 			m.setDestination(i, m.getX(i) + dx * 10.0f, m.getY(i) + dy * 10.0f);
 		}
-	}
-
-	void beDefender(Model m, int i) {
-		// Find the opponent nearest to my flag
-		nearestOpponent(m, Model.XFLAG, Model.YFLAG);
-		if(index >= 0) {
-			float enemyX = m.getXOpponent(index);
-			float enemyY = m.getYOpponent(index);
-
-			// Stay between the enemy and my flag
-			m.setDestination(i, 0.5f * (Model.XFLAG + enemyX), 0.5f * (Model.YFLAG + enemyY));
-
-			// Throw boms if the enemy gets close enough
-			if(sq_dist(enemyX, enemyY, m.getX(i), m.getY(i)) <= Model.MAX_THROW_RADIUS * Model.MAX_THROW_RADIUS)
-				m.throwBomb(i, enemyX, enemyY);
-		}
-		else {
-			// Guard the flag
-			m.setDestination(i, Model.XFLAG + Model.MAX_THROW_RADIUS, Model.YFLAG);
-		}
-
-		// If I don't have enough energy to throw a bomb, rest
-		if(m.getEnergySelf(i) < Model.BOMB_COST)
-			m.setDestination(i, m.getX(i), m.getY(i));
-
-		// Try not to die
-		avoidBombs(m, i);
-	}
-
-	void beFlagAttacker(Model m, int i) {
-		// Head for the opponent's flag
-		uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
-		// m.setDestination(i, Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT);
-
-		// Avoid opponents
-		float myX = m.getX(i);
-		float myY = m.getY(i);
-		nearestOpponent(m, myX, myY);
-		if(index >= 0) {
-			float enemyX = m.getXOpponent(index);
-			float enemyY = m.getYOpponent(index);
-			if(sq_dist(enemyX, enemyY, myX, myY) <= (Model.MAX_THROW_RADIUS + Model.BLAST_RADIUS) * (Model.MAX_THROW_RADIUS + Model.BLAST_RADIUS))
-				m.setDestination(i, myX + 10.0f * (myX - enemyX), myY + 10.0f * (myY - enemyY));
-		}
-
-		// Shoot at the flag if I can hit it
-		if(sq_dist(m.getX(i), m.getY(i), Model.XFLAG_OPPONENT, Model.YFLAG_OPPONENT) <= Model.MAX_THROW_RADIUS * Model.MAX_THROW_RADIUS) {
-			m.throwBomb(i, Model.XFLAG_OPPONENT, Model.YFLAG_OPPONENT);
-		}
-
-		// Try not to die
-		avoidBombs(m, i);
-	}
-
-	void beAggressor(Model m, int i) {
-		float myX = m.getX(i);
-		float myY = m.getY(i);
-
-		// Find the opponent nearest to me
-		nearestOpponent(m, myX, myY);
-		if(index >= 0) {
-			float enemyX = m.getXOpponent(index);
-			float enemyY = m.getYOpponent(index);
-
-			if(m.getEnergySelf(i) >= m.getEnergyOpponent(index)) {
-
-				// Get close enough to throw a bomb at the enemy
-				float dx = myX - enemyX;
-				float dy = myY - enemyY;
-				float t = 1.0f / Math.max(Model.EPSILON, (float)Math.sqrt(dx * dx + dy * dy));
-				dx *= t;
-				dy *= t;
-				m.setDestination(i, enemyX + dx * (Model.MAX_THROW_RADIUS - Model.EPSILON), enemyY + dy * (Model.MAX_THROW_RADIUS - Model.EPSILON));
-
-				// Throw bombs
-				if(sq_dist(enemyX, enemyY, m.getX(i), m.getY(i)) <= Model.MAX_THROW_RADIUS * Model.MAX_THROW_RADIUS)
-					m.throwBomb(i, enemyX, enemyY);
-			}
-			else {
-
-				// If the opponent is close enough to shoot at me...
-				if(sq_dist(enemyX, enemyY, myX, myY) <= (Model.MAX_THROW_RADIUS + Model.BLAST_RADIUS) * (Model.MAX_THROW_RADIUS + Model.BLAST_RADIUS)) {
-					m.setDestination(i, myX + 10.0f * (myX - enemyX), myY + 10.0f * (myY - enemyY)); // Flee
-				}
-				else {
-					m.setDestination(i, myX, myY); // Rest
-				}
-			}
-		}
-		else {
-
-			// Head for the opponent's flag
-			if(m.getSpriteCountOpponent() < 1)
-				uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
-			// m.setDestination(i, Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT);
-
-			// Shoot at the flag if I can hit it
-			if(sq_dist(m.getX(i), m.getY(i), Model.XFLAG_OPPONENT, Model.YFLAG_OPPONENT) <= Model.MAX_THROW_RADIUS * Model.MAX_THROW_RADIUS) {
-				m.throwBomb(i, Model.XFLAG_OPPONENT, Model.YFLAG_OPPONENT);
-			}
-		}
-
-		// Try not to die
-		avoidBombs(m, i);
 	}
 
 	public void update(Model m) {
@@ -243,6 +140,107 @@ class DaiThy implements IAgent
 
 	}
 
+	static class Shadow1 implements IAgent{
+		int param;
+		double[] params;
+
+		Shadow1 () {
+			this.param = 0;
+		}
+
+		Shadow1(int param) {
+			this.param = param;
+		}
+
+		Shadow1(double[] params) {
+			this.param = 0;
+			this.params = params;
+		}
+
+		public void reset(){
+
+		}
+
+		public void update(Model m){
+
+		}
+	}
+	static class Shadow2 implements IAgent{
+		int param;
+		double[] params;
+
+		Shadow2 () {
+			this.param = 0;
+		}
+
+
+		Shadow2(int param) {
+			this.param = param;
+		}
+
+		Shadow2(double[] params) {
+			this.param = 0;
+			this.params = params;
+		}
+
+		public void reset(){
+			
+		}
+
+		public void update(Model m){
+			
+		}
+	}
+
+	public void geneticAlgorithm() throws Exception{
+		final int POPULATION_SIZE = 20;
+
+		ArrayList<double []> root = new ArrayList<double []>();
+		Random r = new Random(1234);
+		for(int i = 0; i < POPULATION_SIZE; i++){
+			double[] param = new double[100];
+				for(int j = 0; j<100; j++)
+					param[j] = 0.01 * r.nextGaussian();
+			root.add(param);
+		}
+
+		while(true){
+			ArrayList<IAgent> agents = new ArrayList<IAgent>();
+			for(int i = 0; i < root.size(); i++){
+				Shadow1 shadow = new Shadow1(root.get(i));
+				if (Controller.doBattleNoGui(shadow, new Shadow2()) == 1){
+					for(int j = 0; j < root.get(i).length; j++)
+						System.out.print(j + ", ");
+					System.out.println();
+				}
+				else{
+					agents.add(shadow);
+				}
+			}
+
+			int[] temp = new int[agents.size()];
+			int[] ranked = Controller.rankAgents(agents, temp, false);
+
+			System.out.println("Ranked: ");
+			for(int i = 0; i < ranked.length; i++){
+				System.out.print(ranked[i] + ", ");
+			}
+			System.out.println();
+
+			// conduct crossover with the top agents
+			double [] chr = new double[291];
+			for(int i = 0; i < 145; i++){
+				chr[i] = root.get(ranked[0])[i];
+			}
+
+			for(int i = 145; i < 291; i++){
+				chr[i] = root.get(ranked[1])[i];
+			}
+
+			root.add(ranked[root.size()-1], chr);
+		}
+	}
+
 	void uniformCostSearch(Model m, int i, Point goal) {
 		float myX = m.getX(i);
 		float myY = m.getY(i);
@@ -250,25 +248,6 @@ class DaiThy implements IAgent
 		int goalThreshold = 10;
 		int distanceToMove = 10;
 
-		// if(goal.x < 0 && goal.x > Model.XMAX) {
-		// 	goal.x = myX;
-		// }
-		// if(goal.y < 0 && goal.y > Model.YMAX){
-		// 	goal.y = myY;
-		// }
-		// if(m.getTravelSpeed(goal.x, goal.y) <= .5){
-		// 	for(int a = (int)goal.x-60; a< goal.x+60; a++)
-		// 		if(a > 1 && goal.y > 1 && a < Model.XMAX  && goal.y < Model.YMAX )
-		// 			if(m.getTravelSpeed(a, goal.y) > .5)
-		// 				goal.x = a;
-					
-				
-		// 	for(int b = (int)goal.y-60; b< goal.y+60; b++)
-		// 		if(goal.x > 1 && b > 1 && goal.x < Model.XMAX  && b < Model.YMAX )
-		// 			if(m.getTravelSpeed(goal.x, b) > .5)
-		// 				goal.y = b;
-		// }
-		
 		//Threshold for just going directly to that destination
 		if(sq_dist(myX, myY, goal.x, goal.y) <= 250){
 			m.setDestination(i, goal.x, goal.y);
