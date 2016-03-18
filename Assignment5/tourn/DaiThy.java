@@ -64,7 +64,7 @@ class DaiThy implements IAgent
 
 	public void update(Model m) {
 		for(int i = 0; i < m.getSpriteCountSelf(); i++) {
-			uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT));
+			uniformCostSearch(m, i, new Point(Model.XFLAG_OPPONENT - (Model.MAX_THROW_RADIUS / 2), Model.YFLAG_OPPONENT));
 
 			// Head for the opponent's flag
 			// m.setDestination(i, Model.XFLAG_OPPONENT - Model.MAX_THROW_RADIUS + 1, Model.YFLAG_OPPONENT);
