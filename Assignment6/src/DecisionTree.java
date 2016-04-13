@@ -1,3 +1,5 @@
+import java.util.Random;
+
 abstract class Node
 {
 	abstract boolean isLeaf();
@@ -17,42 +19,115 @@ class LeafNode extends Node
 {
 	double[] label;
 
+	LeafNode(Matrix labels){
+		label = new double[labels.cols()];
+		for(int i = 0; i < labels.cols(); i++)
+		{
+			if(labels.valueCount(i) == 0)
+				label[i] = labels.columnMean(i);
+			else
+				label[i] = labels.mostCommonValue(i);
+		}
+	}
+
 	boolean isLeaf() { return true; }
 }
 
 class DecisionTree extends SupervisedLearner
 {
+	double[] mode;
 	Node root;
+	int minSize;
+	Random rand;
+
+	DecisionTree(){
+		minSize = 1;
+		/// Seed of 1234, chaotic not random
+		rand = new Random(1234);
+	}
 
 	String name()
 	{
-		return "Decision Tree Learner: ";
+		return "DecisionTree";
 	}
 
-	// Build a tree
-	// Training is done by recursively dividing the data until fewer than k samples remain
-	// Leaf nodes should store a label vector. Uese the approach that basleine uses to combine the k label vectors into a single label.
-	// Tree should handle both continuous and categorical attributes.
-	// For categorical labels, it predicts the value that is most common among the predictions of the models it aggregates. 
-	// For continuous labels, it predicts the mean of the predictions of the models it aggregates.
+	Node buildTree(Matrix features, Matrix labels){
+		// Chop data until it gets small = leafNode
+		/// Base Case
+		if(features.rows() != labels.rows())
+			throw new IllegalArgumentException("Feature rows doesn't equal label rows.");
+		if(features.rows() < minSize){
+			return new LeafNode(labels);
+		}
+		/// Recursive Part
+		else{
+			/// Cut matrix of features
+			int dim = rand.nextInt(features.cols());
+			double[] row = features.row(rand.nextInt(features.rows()));
+			double val = row[dim];
 
-	// Interior nodes need only make binary divisions - should store attribute index and a value on which it divides
-	// Choose division by picking a random sample and attribute from remaining training data
-	void train(Matrix features, Matrix labels)
-	{
-		mode = new double[labels.cols()];
-		for(int i = 0; i < labels.cols(); i++)
-		{
-			if(labels.valueCount(i) == 0)
-				// Continuous Labels
-				mode[i] = labels.columnMean(i);
-			else
-				// Categorical Labels
-				mode[i] = labels.mostCommonValue(i);
+			Matrix thisFeatures = new Matrix();
+			Matrix thisLabels = new Matrix();
+			Matrix thatFeatures = new Matrix();
+			Matrix thatLabels = new Matrix();
+
+			if(features.valueCount(dim) == 0){
+				// Dim is continous
+				// All points < val go in otherMatrix
+				for(int i = 0; i < features.rows(); i++){
+					if(features.row(i)[dim] < val){
+						thisFeatures.newColumn();						
+						thisFeatures.newRow();
+						thisFeatures.copyPart(features, 0, 0, i, thisFeatures.cols());
+						thisLabels.newColumn();						
+						thisLabels.newRow();
+						thisLabels.copyPart(labels, 0, 0, i, thisLabels.cols());
+					}
+					else{
+						thatFeatures.newColumn();						
+						thatFeatures.newRow();
+						thatFeatures.copyPart(features, 0, 0, i, thatFeatures.cols());
+						thatLabels.newColumn();						
+						thatLabels.newRow();
+						thatLabels.copyPart(labels, 0, 0, i, thatLabels.cols());
+					}
+				}
+			}
+			else{
+				// Dim is categorical
+				// All points == val go in otherMatrix]
+				for(int i = 0; i < features.rows(); i++){
+					if(features.row(i)[dim] == val){
+						thisFeatures.newColumn();
+						thisFeatures.newRow();
+						thisFeatures.copyPart(features, 0, 0, i, thisFeatures.cols());
+						thisLabels.newColumn();
+						thisLabels.newRow();
+						thisLabels.copyPart(labels, 0, 0, i, thisLabels.cols());
+					}
+					else{
+						thatFeatures.newColumn();
+						thatFeatures.newRow();
+						thatFeatures.copyPart(features, 0,0, i, thatFeatures.cols());
+						thatLabels.newColumn();
+						thatLabels.newRow();
+						thatLabels.copyPart(labels, 0, 0, i, thatLabels.cols());
+					}
+				}
+
+			}
+			InteriorNode node = new InteriorNode();
+			node.a = buildTree(thisFeatures, thisLabels);
+			node.b = buildTree(thatFeatures, thatLabels);
+			return node;
 		}
 	}
 
-	// Use the tree (built in train) to make a prediction
+	void train(Matrix features, Matrix labels)
+	{
+		root = buildTree(features, labels);	
+	}
+
 	void predict(double[] in, double[] out)
 	{
 		Vec.copy(out, mode);
