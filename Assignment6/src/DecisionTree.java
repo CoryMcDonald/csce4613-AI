@@ -41,7 +41,7 @@ class DecisionTree extends SupervisedLearner
 	Random rand;
 
 	DecisionTree(){
-		minSize = 1;
+		minSize = 5;
 		/// Seed of 1234, chaotic not random
 		rand = new Random(1234);
 	}
@@ -67,29 +67,25 @@ class DecisionTree extends SupervisedLearner
 			double val = row[dim];
 
 			Matrix thisFeatures = new Matrix();
+			thisFeatures.copyMetaData(features);
 			Matrix thisLabels = new Matrix();
+			thisLabels.copyMetaData(labels);
 			Matrix thatFeatures = new Matrix();
+			thatFeatures.copyMetaData(features);
 			Matrix thatLabels = new Matrix();
+			thatLabels.copyMetaData(labels);
 
 			if(features.valueCount(dim) == 0){
 				// Dim is continous
 				// All points < val go in otherMatrix
 				for(int i = 0; i < features.rows(); i++){
 					if(features.row(i)[dim] < val){
-						thisFeatures.newColumn();						
-						thisFeatures.newRow();
-						thisFeatures.copyPart(features, 0, 0, i, thisFeatures.cols());
-						thisLabels.newColumn();						
-						thisLabels.newRow();
-						thisLabels.copyPart(labels, 0, 0, i, thisLabels.cols());
+						thisFeatures.copyPart(features, i, 0, 1, features.cols());
+						thisLabels.copyPart(labels, i, 0, 1, labels.cols());
 					}
 					else{
-						thatFeatures.newColumn();						
-						thatFeatures.newRow();
-						thatFeatures.copyPart(features, 0, 0, i, thatFeatures.cols());
-						thatLabels.newColumn();						
-						thatLabels.newRow();
-						thatLabels.copyPart(labels, 0, 0, i, thatLabels.cols());
+						thatFeatures.copyPart(features, i, 0, 1, features.cols());
+						thatLabels.copyPart(labels, i, 0, 1, labels.cols());
 					}
 				}
 			}
@@ -98,20 +94,12 @@ class DecisionTree extends SupervisedLearner
 				// All points == val go in otherMatrix]
 				for(int i = 0; i < features.rows(); i++){
 					if(features.row(i)[dim] == val){
-						thisFeatures.newColumn();
-						thisFeatures.newRow();
-						thisFeatures.copyPart(features, 0, 0, i, thisFeatures.cols());
-						thisLabels.newColumn();
-						thisLabels.newRow();
-						thisLabels.copyPart(labels, 0, 0, i, thisLabels.cols());
+						thisFeatures.copyPart(features, i, 0, 1, features.cols());
+						thisLabels.copyPart(labels, i, 0, 1, labels.cols());
 					}
 					else{
-						thatFeatures.newColumn();
-						thatFeatures.newRow();
-						thatFeatures.copyPart(features, 0,0, i, thatFeatures.cols());
-						thatLabels.newColumn();
-						thatLabels.newRow();
-						thatLabels.copyPart(labels, 0, 0, i, thatLabels.cols());
+						thatFeatures.copyPart(features, i, 0, 1, features.cols());
+						thatLabels.copyPart(labels, i, 0, 1, labels.cols());
 					}
 				}
 
@@ -119,12 +107,22 @@ class DecisionTree extends SupervisedLearner
 			InteriorNode node = new InteriorNode();
 			node.a = buildTree(thisFeatures, thisLabels);
 			node.b = buildTree(thatFeatures, thatLabels);
+			
 			return node;
 		}
 	}
 
 	void train(Matrix features, Matrix labels)
 	{
+		mode = new double[labels.cols()];
+		for(int i = 0; i < labels.cols(); i++)
+		{
+			if(labels.valueCount(i) == 0)
+				mode[i] = labels.columnMean(i);
+			else
+				mode[i] = labels.mostCommonValue(i);
+		}
+		
 		root = buildTree(features, labels);	
 	}
 
