@@ -24,8 +24,8 @@ public class Matrix
 	// Meta-data
 	private String m_filename;                          // the name of the file
 	private ArrayList<String> m_attr_name;                 // the name of each attribute (or column)
-	private ArrayList<Map<String, Integer>> m_str_to_enum; // value to enumeration
-	private ArrayList<Map<Integer, String>> m_enum_to_str; // enumeration to value
+	private ArrayList<HashMap<String, Integer>> m_str_to_enum; // value to enumeration
+	private ArrayList<HashMap<Integer, String>> m_enum_to_str; // enumeration to value
 
 	/** Creates a 0x0 matrix. (Next, to give this matrix some dimensions, you should call:
 	 *     loadARFF
@@ -37,40 +37,41 @@ public class Matrix
 	{
 		this.m_filename    = "";
 		this.m_attr_name   = new ArrayList<String>();
-		this.m_str_to_enum = new ArrayList<Map<String, Integer>>();
-		this.m_enum_to_str = new ArrayList<Map<Integer, String>>();
+		this.m_str_to_enum = new ArrayList<HashMap<String, Integer>>();
+		this.m_enum_to_str = new ArrayList<HashMap<Integer, String>>();
 	}
 
 	public Matrix(int rows, int cols)
 	{
 		this.m_filename    = "";
 		this.m_attr_name   = new ArrayList<String>();
-		this.m_str_to_enum = new ArrayList<Map<String, Integer>>();
-		this.m_enum_to_str = new ArrayList<Map<Integer, String>>();
+		this.m_str_to_enum = new ArrayList<HashMap<String, Integer>>();
+		this.m_enum_to_str = new ArrayList<HashMap<Integer, String>>();
 		setSize(rows, cols);
 	}
 
 	public Matrix(Matrix that)
 	{
+		setSize(that.rows(), that.cols());
 		m_filename = that.m_filename;
-		m_attr_name = that.m_attr_name;
-		m_str_to_enum = that.m_str_to_enum;
-		m_enum_to_str = that.m_enum_to_str;
-		setSize(0, that.cols());
-		copyPart(that, 0, 0, that.rows(), that.cols());
+		m_attr_name = new ArrayList<String>();
+		m_str_to_enum = new ArrayList<HashMap<String, Integer>>();
+		m_enum_to_str = new ArrayList<HashMap<Integer, String>>();
+		copyBlock(0, 0, that, 0, 0, that.rows(), that.cols());
 	}
 
 	/** Loads the matrix from an ARFF file */
 	public void loadARFF(String filename)
 	{
-		Map<String, Integer> tempMap  = new HashMap<String, Integer>(); //temp map for int->string map (attrInts)
-		Map<Integer, String> tempMapS = new HashMap<Integer, String>(); //temp map for string->int map (attrString)
-		
-		int attrCount                 = 0; // Count number of attributes
-		int lineNum                   = 0; // Used for exceptions
-		
+		HashMap<String, Integer> tempMap  = new HashMap<String, Integer>(); //temp map for int->string map (attrInts)
+		HashMap<Integer, String> tempMapS = new HashMap<Integer, String>(); //temp map for string->int map (attrString)
+		int attrCount = 0; // Count number of attributes
+		int lineNum = 0; // Used for exception messages
 		Scanner s = null;
-		
+		m_str_to_enum.clear();
+		m_enum_to_str.clear();
+		m_attr_name.clear();
+
 		try
 		{
 			s = new Scanner(new File(filename));
@@ -145,7 +146,7 @@ public class Matrix
 							// If the attribute is nominal
 							if (vals > 0)
 							{
-								Map<String, Integer> enumMap = m_str_to_enum.get(i);
+								HashMap<String, Integer> enumMap = m_str_to_enum.get(i);
 								if (!enumMap.containsKey(val))
 									throw new IllegalArgumentException("Unrecognized enumeration value " + val + " on line: " + lineNum + ".");
 									
@@ -276,22 +277,22 @@ public class Matrix
 		m_attr_name = new ArrayList<String>(that.m_attr_name);
 		
 		// Make a deep copy of that.m_str_to_enum
-		m_str_to_enum = new ArrayList<Map<String, Integer>>();
-		for (Map<String, Integer> map : that.m_str_to_enum)
+		m_str_to_enum = new ArrayList<HashMap<String, Integer>>();
+		for (HashMap<String, Integer> map : that.m_str_to_enum)
 		{
-			Map<String, Integer> temp = new HashMap<String, Integer>();
-			for (Map.Entry<String, Integer> entry : map.entrySet())
+			HashMap<String, Integer> temp = new HashMap<String, Integer>();
+			for (HashMap.Entry<String, Integer> entry : map.entrySet())
 				temp.put(entry.getKey(), entry.getValue());
 			
 			m_str_to_enum.add(temp);
 		}
 		
 		// Make a deep copy of that.m_enum_to_string
-		m_enum_to_str = new ArrayList<Map<Integer, String>>();
-		for (Map<Integer, String> map : that.m_enum_to_str)
+		m_enum_to_str = new ArrayList<HashMap<Integer, String>>();
+		for (HashMap<Integer, String> map : that.m_enum_to_str)
 		{
-			Map<Integer, String> temp = new HashMap<Integer, String>();
-			for (Map.Entry<Integer, String> entry : map.entrySet())
+			HashMap<Integer, String> temp = new HashMap<Integer, String>();
+			for (HashMap.Entry<Integer, String> entry : map.entrySet())
 				temp.put(entry.getKey(), entry.getValue());
 			
 			m_enum_to_str.add(temp);
@@ -308,8 +309,8 @@ public class Matrix
 		
 		m_attr_name.add(name);
 		
-		Map<String, Integer> temp_str_to_enum = new HashMap<String, Integer>();
-		Map<Integer, String> temp_enum_to_str = new HashMap<Integer, String>();
+		HashMap<String, Integer> temp_str_to_enum = new HashMap<String, Integer>();
+		HashMap<Integer, String> temp_enum_to_str = new HashMap<Integer, String>();
 		
 		for (int i = 0; i < vals; i++)
 		{
@@ -435,7 +436,7 @@ public class Matrix
 	/** Returns the most common value in the specified column. (Elements with the value UNKNOWN_VALUE are ignored.) */
 	public double mostCommonValue(int col)
 	{
-		Map<Double, Integer> counts = new HashMap<Double, Integer>();
+		HashMap<Double, Integer> counts = new HashMap<Double, Integer>();
 		for (double[] list : m_data)
 		{
 			double val = list[col];
@@ -461,32 +462,30 @@ public class Matrix
 		
 		return value;
 	}
-	
-	/** Copies the specified rectangular portion of that matrix, and adds it to the bottom of this matrix.
-	 *  (If colCount does not match the number of columns in this matrix, then this matrix will be cleared first.) */
-	public void copyPart(Matrix that, int rowBegin, int colBegin, int rowCount, int colCount)
+
+	/** Copies the specified rectangular portion of that matrix, and puts it in the specified location in this matrix. */
+	public void copyBlock(int destRow, int destCol, Matrix that, int rowBegin, int colBegin, int rowCount, int colCount)
 	{
+		if (destRow + rowCount > this.rows() || destCol + colCount > this.cols())
+			throw new IllegalArgumentException("Out of range for destination matrix.");
 		if (rowBegin + rowCount > that.rows() || colBegin + colCount > that.cols())
-			throw new IllegalArgumentException("Out of range.");
-		
+			throw new IllegalArgumentException("Out of range for source matrix.");
+
 		// Copy the specified region of meta-data
-		if (cols() != colCount)
-			setSize(0, colCount);
-		
 		for (int i = 0; i < colCount; i++)
 		{
-			m_attr_name.set  (i, that.m_attr_name.get(colBegin + i));
-			m_str_to_enum.set(i, that.m_str_to_enum.get(colBegin + i));
-			m_enum_to_str.set(i, that.m_enum_to_str.get(colBegin + i));
+			m_attr_name.set(i, that.m_attr_name.get(colBegin + i));
+			m_str_to_enum.set(i, new HashMap<String, Integer>(that.m_str_to_enum.get(colBegin + i)));
+			m_enum_to_str.set(i, new HashMap<Integer, String>(that.m_enum_to_str.get(colBegin + i)));
 		}
-		
-		// Copy the specified region of data		
+
+		// Copy the specified region of data
 		for (int i = 0; i < rowCount; i++)
 		{
 			double[] source = that.row(rowBegin + i);
-			double[] newrow = newRow();
+			double[] dest = this.row(destRow + i);
 			for(int j = 0; j < colCount; j++)
-				newrow[j] = source[colBegin + j];
+				dest[j] = source[colBegin + j];
 		}
 	}
 	
