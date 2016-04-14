@@ -9,8 +9,15 @@ class InteriorNode extends Node
 {
 	int attribute; // which attribute to divide on
 	double pivot; // which value to divide on
+	int isCont;
 	Node a;
 	Node b;
+
+	InteriorNode(int attribute, double pivot, int isCont){
+		this.attribute = attribute;
+		this.pivot = pivot;
+		this.isCont = isCont;
+	}
 
 	boolean isLeaf() { return false; }
 }
@@ -80,12 +87,16 @@ class DecisionTree extends SupervisedLearner
 				// All points < val go in otherMatrix
 				for(int i = 0; i < features.rows(); i++){
 					if(features.row(i)[dim] < val){
-						thisFeatures.copyPart(features, i, 0, 1, features.cols());
-						thisLabels.copyPart(labels, i, 0, 1, labels.cols());
+						thisFeatures.newRow();
+						thisFeatures.copyBlock(thisFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
+						thisLabels.newRow();
+						thisLabels.copyBlock(thisLabels.rows()-1, 0, labels, i, 0, 1, labels.cols());
 					}
 					else{
-						thatFeatures.copyPart(features, i, 0, 1, features.cols());
-						thatLabels.copyPart(labels, i, 0, 1, labels.cols());
+						thatFeatures.newRow();
+						thatFeatures.copyBlock(thatFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
+						thatLabels.newRow();						
+						thatLabels.copyBlock(thatLabels.rows() - 1, 0, labels, i, 0, 1, labels.cols());
 					}
 				}
 			}
@@ -94,17 +105,21 @@ class DecisionTree extends SupervisedLearner
 				// All points == val go in otherMatrix]
 				for(int i = 0; i < features.rows(); i++){
 					if(features.row(i)[dim] == val){
-						thisFeatures.copyPart(features, i, 0, 1, features.cols());
-						thisLabels.copyPart(labels, i, 0, 1, labels.cols());
+						thisFeatures.newRow();
+						thisFeatures.copyBlock(thisFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
+						thisLabels.newRow();						
+						thisLabels.copyBlock(thisLabels.rows() - 1, 0, labels, i, 0, 1, labels.cols());
 					}
 					else{
-						thatFeatures.copyPart(features, i, 0, 1, features.cols());
-						thatLabels.copyPart(labels, i, 0, 1, labels.cols());
+						thatFeatures.newRow();						
+						thatFeatures.copyBlock(thatFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
+						thatLabels.newRow();						
+						thatLabels.copyBlock(thatLabels.rows() - 1, 0, labels, i, 0, 1, labels.cols());
 					}
 				}
 
 			}
-			InteriorNode node = new InteriorNode();
+			InteriorNode node = new InteriorNode(dim, val, features.valueCount(dim));
 			node.a = buildTree(thisFeatures, thisLabels);
 			node.b = buildTree(thatFeatures, thatLabels);
 			
@@ -113,21 +128,27 @@ class DecisionTree extends SupervisedLearner
 	}
 
 	void train(Matrix features, Matrix labels)
-	{
-		mode = new double[labels.cols()];
-		for(int i = 0; i < labels.cols(); i++)
-		{
-			if(labels.valueCount(i) == 0)
-				mode[i] = labels.columnMean(i);
-			else
-				mode[i] = labels.mostCommonValue(i);
-		}
-		
+	{		
 		root = buildTree(features, labels);	
 	}
 
 	void predict(double[] in, double[] out)
 	{
-		Vec.copy(out, mode);
+		Node n = root;
+		while(!n.isLeaf()){
+			if(((InteriorNode)n).isCont == 0){
+				if(in[((InteriorNode)n).attribute] < ((InteriorNode)n).pivot)
+					n = ((InteriorNode)n).a;
+				else
+					n = ((InteriorNode)n).b;
+			}
+			else{
+				if(in[((InteriorNode)n).attribute] == ((InteriorNode)n).pivot)
+					n = ((InteriorNode)n).a;
+				else
+					n = ((InteriorNode)n).b;
+			}
+		}
+		Vec.copy(out, ((LeafNode)n).label);
 	}
 }
