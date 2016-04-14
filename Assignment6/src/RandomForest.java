@@ -1,11 +1,27 @@
+import java.util.ArrayList;
 
 class RandomForest extends SupervisedLearner
 {
 	double[] mode;
+	int numOfTrees;
+	ArrayList<DecisionTree> list;
+
+	RandomForest(){
+		this.numOfTrees = 0;
+		list = new ArrayList<DecisionTree>();
+	}
+
+	RandomForest(int numOfTrees){
+		this.numOfTrees = numOfTrees;
+		list = new ArrayList<DecisionTree>();
+		for(int i = 0; i < this.numOfTrees){
+			list.add(new DecisionTree());
+		}
+	}
 
 	String name()
 	{
-		return "Random Forest: ";
+		return "RandomForest";
 	}
 
 	// Should instantiate n DecisionTree instances
