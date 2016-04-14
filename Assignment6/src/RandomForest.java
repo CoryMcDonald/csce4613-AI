@@ -14,7 +14,7 @@ class RandomForest extends SupervisedLearner
 	RandomForest(int numOfTrees){
 		this.numOfTrees = numOfTrees;
 		list = new ArrayList<DecisionTree>();
-		for(int i = 0; i < this.numOfTrees; i++){
+		for(int i = 0; i < this.numOfTrees){
 			list.add(new DecisionTree());
 		}
 	}
