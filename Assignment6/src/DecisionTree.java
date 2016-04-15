@@ -1,8 +1,3 @@
-abstract class Node
-{
-	abstract boolean isLeaf();
-}
-
 class Random {
 	long m_a;
 	long m_b;
@@ -45,6 +40,11 @@ class Random {
 	}
 }
 
+abstract class Node
+{
+	abstract boolean isLeaf();
+}
+
 class InteriorNode extends Node
 {
 	int attribute; // which attribute to divide on
@@ -66,6 +66,10 @@ class LeafNode extends Node
 {
 	double[] label;
 
+	LeafNode(){
+
+	}
+
 	LeafNode(Matrix labels){
 		label = new double[labels.cols()];
 		for(int i = 0; i < labels.cols(); i++)
@@ -82,7 +86,6 @@ class LeafNode extends Node
 
 class DecisionTree extends SupervisedLearner
 {
-	double[] mode;
 	Node root;
 	int minSize;
 	Random rand;
