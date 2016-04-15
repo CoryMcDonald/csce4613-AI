@@ -118,43 +118,46 @@ class DecisionTree extends SupervisedLearner
 			double val = row[dim];
 			
 			Matrix thisFeatures = new Matrix();
-			thisFeatures.copyMetaData(features);
 			Matrix thisLabels = new Matrix();
-			thisLabels.copyMetaData(labels);
 			Matrix thatFeatures = new Matrix();
-			thatFeatures.copyMetaData(features);
 			Matrix thatLabels = new Matrix();
+			
+			thisFeatures.copyMetaData(features);
+			thisLabels.copyMetaData(labels);
+			thatFeatures.copyMetaData(features);
 			thatLabels.copyMetaData(labels);
 			
 			if(features.valueCount(dim) == 0){
 				// Dim is continous
 				// All points < val go in otherMatrix
 				for(int i = 0; i < features.rows(); i++){
-					if(features.row(i)[dim] < val){
-						thisFeatures.newRow();
-						thisFeatures.copyBlock(thisFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
-						thisLabels.newRow();
-						thisLabels.copyBlock(thisLabels.rows()-1, 0, labels, i, 0, 1, labels.cols());
-					}else{
+					if(features.row(i)[dim] >= val){
 						thatFeatures.newRow();
 						thatFeatures.copyBlock(thatFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
 						thatLabels.newRow();
 						thatLabels.copyBlock(thatLabels.rows() - 1, 0, labels, i, 0, 1, labels.cols());
+					}else{
+						
+						thisFeatures.newRow();
+						thisFeatures.copyBlock(thisFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
+						thisLabels.newRow();
+						thisLabels.copyBlock(thisLabels.rows()-1, 0, labels, i, 0, 1, labels.cols());
 					}
 				}
 			}else{
 				for(int i = 0; i < features.rows(); i++){
 					//categorical
-					if(features.row(i)[dim] == val){
-						thisFeatures.newRow();
-						thisFeatures.copyBlock(thisFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
-						thisLabels.newRow();
-						thisLabels.copyBlock(thisLabels.rows() - 1, 0, labels, i, 0, 1, labels.cols());
-					}else{
+					if(features.row(i)[dim] != val){
 						thatFeatures.newRow();
 						thatFeatures.copyBlock(thatFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
 						thatLabels.newRow();
 						thatLabels.copyBlock(thatLabels.rows() - 1, 0, labels, i, 0, 1, labels.cols());
+						
+					}else{
+						thisFeatures.newRow();
+						thisFeatures.copyBlock(thisFeatures.rows() - 1, 0, features, i, 0, 1, features.cols());
+						thisLabels.newRow();
+						thisLabels.copyBlock(thisLabels.rows() - 1, 0, labels, i, 0, 1, labels.cols());
 					}
 				}
 			}
@@ -175,22 +178,23 @@ class DecisionTree extends SupervisedLearner
 	void predict(double[] in, double[] out) {
 		Node n = root;
 		
-		while(!n.isLeaf()){			
-			if(((InteriorNode) n).isCont == 0){
-				if(in[((InteriorNode)n).attribute] < ((InteriorNode)n).pivot){
-					n = ((InteriorNode)n).a;
+		while(!n.isLeaf()){	
+			InteriorNode nn = ((InteriorNode) n);
+			if(nn.isCont == 0){
+				if(in[nn.attribute] < nn.pivot){
+					n = nn.a;
 				}else{
-					n = ((InteriorNode)n).b;
+					n = nn.b;
 				}
 			}else{
-				if(in[((InteriorNode) n).attribute] == ((InteriorNode)n).pivot){
-					n = ((InteriorNode)n).a;
+				if(in[nn.attribute] == nn.pivot){
+					n = nn.a;
 				}else{
-					n = ((InteriorNode)n).b;
+					n = nn.b;
 				}
 			}
 		}
 		
-		Vec.copy(out, ((LeafNode)n).label);
+		Vec.copy(out, nn.label);
 	}
 }
